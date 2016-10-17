@@ -7,7 +7,7 @@
 #define __WIREOPT_H__
 
 #include <omp.h>
-#define WIRE_MAX 20
+#define WIRE_MAX 10
 /* value_t struct is used to calculate the local minimum path
  */
 typedef struct{
@@ -23,17 +23,11 @@ typedef struct
 	int numBends;   // 0, 1, or 2
 	int bends[4];   // bend 1, bend 2 (or no empty)
 	int bounds[4];  // start point, end point ([x y x y]) CONSTANT VALUES
-} path_t;
+} wire_t;
 
 /* wire_t *
  * Wire struct - define a single wire as two path's
  */
-typedef struct
-{
-  // Current path 'definition'
-	path_t *currentPath;
-	// Previous path 'definition'
-} wire_t;
 
 /* cost_cell_t *
  * Just an integer, but with a lock for cost array writes per cell
@@ -58,7 +52,6 @@ typedef struct
   int prevAggrTotal;
   int currentMax;
   int currentAggrTotal;
-  cost_cell_t* board;
 } cost_t;
 
 /* Command line helper functions */
@@ -67,15 +60,15 @@ int get_option_int(const char *option_name, int default_value);
 float get_option_float(const char *option_name, float default_value);
 
 /* Our helper functions */
-inline void horizontalCost(cost_cell_t *C, int row, int startX, int endX, int dimY, int wire_n);
-inline void verticalCost(cost_cell_t *C, int xCoord, int startY, int endY, int dimY, int wire_n);
-inline void new_rand_path(wire_t *wire);
-inline void incrCell(cost_cell_t *C, int x, int y, int dimY, int wire_n);
-inline void updateBoard(cost_t* board);
-inline int readBoard(cost_t* board, int x, int y, int wire_n);
-inline value_t readVertical(cost_t* board, int x, int s_y, int e_y, int wire_n);
-inline value_t readHorizontal(cost_t* board, int y, int s_x, int e_x, int wire_n);
-inline value_t calculatePath(cost_t* board, int s_x, int s_y, int e_x, int e_y,
+void horizontalCost(cost_cell_t *C, int row, int startX, int endX, int dimY, int wire_n);
+void verticalCost(cost_cell_t *C, int xCoord, int startY, int endY, int dimY, int wire_n);
+void new_rand_path(wire_t *wire, int* rand, int wire_n);
+void incrCell(cost_cell_t *C, int x, int y, int dimY, int wire_n);
+void updateBoard(cost_t* board, cost_cell_t *B);
+int readBoard(cost_cell_t* board, int x, int y, int wire_n, int dimY);
+value_t readVertical(cost_t* board, int x, int s_y, int e_y, int wire_n, cost_cell_t *B);
+value_t readHorizontal(cost_t* board, int y, int s_x, int e_x, int wire_n, cost_cell_t *B);
+value_t calculatePath(cost_t* board, cost_cell_t *B,  int s_x, int s_y, int e_x, int e_y,
           int numBends, int b1_x, int b1_y, int b2_x, int b2_y, int wire_n);
-inline value_t combineValue(value_t v1, value_t v2);
+value_t combineValue(value_t v1, value_t v2);
 #endif
