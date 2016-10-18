@@ -7,7 +7,7 @@
 #define __WIREOPT_H__
 
 #include <omp.h>
-#define WIRE_MAX 10
+#define WIRE_MAX 5
 /* value_t struct is used to calculate the local minimum path
  */
 typedef struct{
@@ -21,13 +21,15 @@ typedef struct{
 typedef struct
 {
 	int numBends;   // 0, 1, or 2
-	int bends[4];   // bend 1, bend 2 (or no empty)
-	int bounds[4];  // start point, end point ([x y x y]) CONSTANT VALUES
+	int bends0;   // bend 1, bend 2 (or no empty)
+	int bends1;   // bend 1, bend 2 (or no empty)
+	int bends2;   // bend 1, bend 2 (or no empty)
+	int bends3;   // bend 1, bend 2 (or no empty)
+	int bound0;  // start point, end point ([x y x y]) CONSTANT VALUES
+	int bound1;  // start point, end point ([x y x y]) CONSTANT VALUES
+	int bound2;  // start point, end point ([x y x y]) CONSTANT VALUES
+	int bound3;  // start point, end point ([x y x y]) CONSTANT VALUES
 } wire_t;
-
-/* wire_t *
- * Wire struct - define a single wire as two path's
- */
 
 /* cost_cell_t *
  * Just an integer, but with a lock for cost array writes per cell
@@ -35,7 +37,9 @@ typedef struct
 typedef struct
 {
   int wire;
-  int list[WIRE_MAX];
+  int list0;
+  int list1;
+  int list2;
 	omp_lock_t lock;
 	int val;
 } cost_cell_t;

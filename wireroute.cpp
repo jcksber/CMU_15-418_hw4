@@ -70,10 +70,10 @@ void new_rand_path(wire_t* wire, int *rand, int wire_n){
   //overwrite previous path
   int bend = 0;
   int s_x, s_y, e_x, e_y, dy, yp, dx, xp;
-  s_x = wire->bounds[0];
-  s_y = wire->bounds[1];
-  e_x = wire->bounds[2];
-  e_y = wire->bounds[3];
+  s_x = wire->bound0;
+  s_y = wire->bound1;
+  e_x = wire->bound2;
+  e_y = wire->bound3;
   if (s_x == e_x || s_y == e_y){
     return;
   }
@@ -91,10 +91,10 @@ void new_rand_path(wire_t* wire, int *rand, int wire_n){
     // determind bends
     if(e_y != yp) bend +=1;
     // overwrite
-    wire->bends[0] = s_x;
-    wire->bends[1] = yp;
-    wire->bends[2] = e_x;
-    wire->bends[3] = yp;
+    wire->bends0 = s_x;
+    wire->bends1 = yp;
+    wire->bends2 = e_x;
+    wire->bends3 = yp;
     wire->numBends = bend;
   }
   else{
@@ -106,10 +106,10 @@ void new_rand_path(wire_t* wire, int *rand, int wire_n){
     // determind bends
     if(e_x != xp) bend +=1;
     // overwrite
-    wire->bends[0] = xp;
-    wire->bends[1] = s_y;
-    wire->bends[2] = xp;
-    wire->bends[3] = e_y;
+    wire->bends0 = xp;
+    wire->bends1 = s_y;
+    wire->bends2 = xp;
+    wire->bends3 = e_y;
     wire->numBends = bend;
   }
 }
@@ -151,15 +151,28 @@ void verticalCost(cost_cell_t *C, int xCoord, int startY, int endY, int dimY, in
 // Use cell level lock to safely incre value by 1
 // INPUT: ptr to board, x coord , y coord, dim_y
 void incrCell(cost_cell_t *C, int x, int y, int dimY, int wire_n){
-  cost_cell_t *c;
-  c = &C[y*dimY + x]; // calculate the idx in board
-  omp_set_lock(&c->lock);
-    c->val +=1;
-    if(c->wire < WIRE_MAX){
-      c->list[c->wire] = wire_n;
-      c->wire += 1;
+  cost_cell_t c = C[y*dimY + x]; // calculate the idx in board
+  omp_set_lock(&c.lock);
+  //printf("%d  the value\n", c.val);// = c.val + 1;
+  /*
+    switch(c.wire){
+      case 0:
+        c.list0 = wire_n;
+        c.wire += 1;
+        break;
+      case 1:
+        c.list1 = wire_n;
+        c.wire += 1;
+        break;
+      case 2:
+        c.list2 = wire_n;
+        c.wire += 1;
+        break;
+      default:
+        break;
     }
-  omp_unset_lock(&c->lock);
+    */
+  omp_unset_lock(&c.lock);
 }
 
 /* use to run board statistic  */
@@ -184,8 +197,7 @@ void updateBoard(cost_t *board, cost_cell_t *B){
 // read a value in the board
 int readBoard(cost_cell_t *board, int x, int y, int wire_n, int dimY){
   cost_cell_t *c =&board[y*dimY + x];
-  for (int count = 0; count < c->wire; count++){
-    if(wire_n == c->list[count])
+  if(wire_n == c->list0 || wire_n == c->list1 ||wire_n == c->list2 ){
       return c->val-1;
   }
   return c->val;
@@ -358,14 +370,14 @@ int main(int argc, const char *argv[])
     int s_x, s_y, e_x, e_y;
     fscanf(input, "%d %d %d %d\n", &s_x, &s_y, &e_x, &e_y);
     wires[count].numBends = 0;
-    wires[count].bends[0] = -1;
-    wires[count].bends[1] = -1;
-    wires[count].bends[2] = -1;
-    wires[count].bends[3] = -1;
-    wires[count].bounds[0] = s_x;
-    wires[count].bounds[1] = s_y;
-    wires[count].bounds[2] = e_x;
-    wires[count].bounds[3] = e_y;
+    wires[count].bends0 = -1;
+    wires[count].bends1 = -1;
+    wires[count].bends2 = -1;
+    wires[count].bends3 = -1;
+    wires[count].bound0 = s_x;
+    wires[count].bound1 = s_y;
+    wires[count].bound2 = e_x;
+    wires[count].bound3 = e_y;
     count++;
   }
   printf("Complete read wires: %d\n", count);
@@ -450,7 +462,9 @@ int main(int argc, const char *argv[])
         for( x = 0; x < dim_x; x++){
           B[y*dim_y + x].val = 0;  // clean up board
           B[y*dim_y + x].wire = 0;  // clean up board
-          memset(B[y*dim_y + x].list, 0, sizeof(int)*WIRE_MAX);
+          B[y*dim_y + x].list0 = 0;
+          B[y*dim_y + x].list1 = 0;
+          B[y*dim_y + x].list2 = 0;
         }
       }
   	  printf(">>> CleanUp board \n");
@@ -461,10 +475,10 @@ int main(int argc, const char *argv[])
       for (j = 0; j < num_of_wires; j++){
         // Initialize wire private variables
         mypath = wires[j];
-        s_x = mypath.bounds[0];   // (start point)
-        s_y = mypath.bounds[1];
-        e_x = mypath.bounds[2];   // (end point)
-        e_y = mypath.bounds[3];
+        s_x = mypath.bound0;   // (start point)
+        s_y = mypath.bound1;
+        e_x = mypath.bound2;   // (end point)
+        e_y = mypath.bound3;
         // Follow path & update cost array
         switch (mypath.numBends) {
           case 0:
@@ -479,8 +493,8 @@ int main(int argc, const char *argv[])
               break;
             }
           case 1:
-            b1_x = mypath.bends[0];
-            b1_y = mypath.bends[1]; // Get bend coordinate
+            b1_x = mypath.bends0;
+            b1_y = mypath.bends1; // Get bend coordinate
             if (s_y == b1_y) // Before bend is horizontal
             {
               horizontalCost(B, s_y, s_x, b1_x, dim_y,j);
@@ -499,14 +513,14 @@ int main(int argc, const char *argv[])
             }
 
           case 2:
-          // b1_x = mypath.bends[0];
-          //  b1_y = mypath.bends[1];
-           // b2_x = mypath.bends[2];
-           // b2_y = mypath.bends[3];
+            b1_x = mypath.bends0;
+            b1_y = mypath.bends1;
+            b2_x = mypath.bends2;
+            b2_y = mypath.bends3;
             // Exam first bend
             if (s_y == b1_y) // Before bend is horizontal
             {
-             // horizontalCost(B, s_y, s_x, b1_x, dim_y, j);
+             //  horizontalCost(B, s_y, s_x, b1_x, dim_y, j);
              // verticalCost(B, b1_x, b1_y, b2_y, dim_y, j);//after bend is vertical
              // horizontalCost(B, e_y, b2_x, e_x,dim_y, j);
               incrCell(B, e_x, e_y, dim_y, j);
@@ -514,51 +528,46 @@ int main(int argc, const char *argv[])
             }
             if (s_x == b1_x) // Before bend is vertical
             {
-            //  verticalCost(B, s_x, s_y, b1_y, dim_y, j);
-            //  horizontalCost(B, b1_y, b1_x, b2_x, dim_y, j);//after bend is horizontal
-            //  verticalCost(B, b2_x, b2_y, e_y, dim_y, j);
-              incrCell(B, e_x, e_y, dim_y, j);
+             // verticalCost(B, s_x, s_y, b1_y, dim_y, j);
+             // horizontalCost(B, b1_y, b1_x, b2_x, dim_y, j);//after bend is horizontal
+             // verticalCost(B, b2_x, b2_y, e_y, dim_y, j);
+             // incrCell(B, e_x, e_y, dim_y, j);
               break;
             }
+            break;
         }
       } // implicit barrier
-
-      //// DEBUG
     }
       /*
-      //
-      //
-      //
-  	printf(">>> Layout new board \n");
+  	  printf(">>> Layout new board \n");
       // Parallel by wire, determine NEW path
       #pragma omp parallel for default(shared)       \
           private(w,row, col,  mypath, localMax, tempMax, s_x, s_y, e_x, e_y, b1_x, b2_x, \
                   b1_y, b2_y, n1_x, n1_y, n2_x, n2_y, nBend, dir) \
-              shared(wires, costs, B) schedule(dynamic)
+              shared(wires, costs, rand_wire,  B) schedule(dynamic)
       for (w = 0; w < num_of_wires; w++){
         // With probability 1 - P, choose the current min path.
-        srand(time(NULL));
-        if(> int(SA_prob*100)){
+        if(rand_iter[i]> int(SA_prob*100)){
           // xx% chance pick the complicated  algo
-          mypath = &wires[w];
-          s_x = mypath->bounds[0];   // (start point)
-          s_y = mypath->bounds[1];
-          e_x = mypath->bounds[2];   // (end point)
-          e_y = mypath->bounds[3];
-          b1_x = mypath->bends[0];
-          b1_y = mypath->bends[1];
-          b2_x = mypath->bends[2];
-          b2_y = mypath->bends[3];
+          mypath = wires[w];
+          s_x = mypath.bound0;   // (start point)
+          s_y = mypath.bound1;
+          e_x = mypath.bound2;   // (end point)
+          e_y = mypath.bound3;
+          b1_x = mypath.bends0;
+          b1_y = mypath.bends1;
+          b2_x = mypath.bends2;
+          b2_y = mypath.bends3;
           n1_x = b1_x;
           n1_y = b1_y;
           n2_x = b2_x;
           n2_y = b2_y;
-          nBend = mypath->numBends;
+          nBend = mypath.numBends;
           if ( s_x != e_x && s_y != e_y){
             localMax = calculatePath(costs, B, s_x, s_y, e_x, e_y, nBend, b1_x, b1_y, b2_x, b2_y, -1);
             // case of one bend, at the end points
             // -> horizontal first:
-            tempMax = calculatePath(costs, s_x, s_y, e_x, e_y, 1 ,e_x, s_y, 0, 0, w);
+            tempMax = calculatePath(costs, B, s_x, s_y, e_x, e_y, 1 ,e_x, s_y, 0, 0, w);
             if(tempMax.m < localMax.m && tempMax.aggr_max < localMax.aggr_max){
               localMax.m = tempMax.m;
               localMax.aggr_max = tempMax.aggr_max;
@@ -567,7 +576,7 @@ int main(int argc, const char *argv[])
               n1_y = s_y;
             }
             // -> vertical one bend
-            tempMax = calculatePath(costs,B, s_x, s_y, e_x, e_y, 1 ,s_x, e_y, 0, 0, w);
+            tempMax = calculatePath(costs, B, s_x, s_y, e_x, e_y, 1 ,s_x, e_y, 0, 0, w);
             if(tempMax.m < localMax.m && tempMax.aggr_max < localMax.aggr_max){
               localMax.m = tempMax.m;
               localMax.aggr_max = tempMax.aggr_max;
@@ -605,17 +614,17 @@ int main(int argc, const char *argv[])
             }
           }
           // set new wire
-          mypath->numBends = nBend;
-          mypath->bends[0] = n1_x;
-          mypath->bends[1] = n1_y;
-          mypath->bends[2] = n2_x;
-          mypath->bends[3] = n2_y;
+          mypath.numBends = nBend;
+          mypath.bends0 = n1_x;
+          mypath.bends1 = n1_y;
+          mypath.bends2 = n2_x;
+          mypath.bends3 = n2_y;
         }
         else{ // xx% chance take random path
-          new_rand_path( &(wires[w]) );
+          new_rand_path( &(wires[w]), rand_wire, w );
         } // implicit barrier
       }
-  	printf(">>> Finish pick a wire set \n");
+  	  printf(">>> Finish pick a wire set \n");
       // Finish picking the new path
     } //  end iterations
 
@@ -636,13 +645,13 @@ int main(int argc, const char *argv[])
         shared(wires, B) schedule(dynamic)
     for (j = 0; j < num_of_wires; j++){
       // Initialize wire private variables
-      mypath    = &wires[j];
-      s_x = mypath->bounds[0];   // (start point)
-      s_y = mypath->bounds[1];
-      e_x = mypath->bounds[2];   // (end point)
-      e_y = mypath->bounds[3];
+      mypath = wires[j];
+      s_x = mypath.bound0;   // (start point)
+      s_y = mypath.bound1;
+      e_x = mypath.bound2;   // (end point)
+      e_y = mypath.bound3;
       // Follow path & update cost array
-      switch (mypath->numBends) {
+      switch (mypath.numBends) {
         case 0:
           if (s_y == e_y){ // Horizontal path
             horizontalCost(B, s_y, s_x, e_x, dim_y, j);
@@ -655,8 +664,8 @@ int main(int argc, const char *argv[])
             break;
           }
         case 1:
-          b1_x = mypath->bends[0];
-          b1_y = mypath->bends[1]; // Get bend coordinate
+          b1_x = mypath.bends0;
+          b1_y = mypath.bends1; // Get bend coordinate
           if (s_y == b1_y) // Before bend is horizontal
           {
             horizontalCost(B, s_y, s_x, b1_x, dim_y, j);
@@ -674,10 +683,10 @@ int main(int argc, const char *argv[])
             break;
           }
         case 2:
-          b1_x = mypath->bends[0]; // Get both bend coordinates
-          b1_y = mypath->bends[1];
-          b2_x = mypath->bends[2];
-          b2_y = mypath->bends[3];
+          b1_x = mypath.bends0; // Get both bend coordinates
+          b1_y = mypath.bends1;
+          b2_x = mypath.bends2;
+          b2_y = mypath.bends3;
           // Exam first bend
           if (s_y == b1_y) // Before bend is horizontal
           {
@@ -767,20 +776,20 @@ int main(int argc, const char *argv[])
   // wrting to wire
   fprintf(outputWire, "%d\n", num_of_wires);
   for(int w_count = 0; w_count < num_of_wires; w_count++){
-    fprintf(outputWire, "%d %d ", wires[w_count].bounds[0],
-                       wires[w_count].bounds[1]);
+    fprintf(outputWire, "%d %d ", wires[w_count].bound0,
+                       wires[w_count].bound1);
     if(wires[w_count].numBends == 2){
-      fprintf(outputWire, "%d %d ", wires[w_count].bends[0],
-                       wires[w_count].bends[1]);
-      fprintf(outputWire, "%d %d ", wires[w_count].bends[2],
-                       wires[w_count].bends[3]);
+      fprintf(outputWire, "%d %d ", wires[w_count].bends0,
+                       wires[w_count].bends1);
+      fprintf(outputWire, "%d %d ", wires[w_count].bends2,
+                       wires[w_count].bends3);
     }
     if(wires[w_count].numBends == 1){
-      fprintf(outputWire, "%d %d ", wires[w_count].bends[0],
-                       wires[w_count].bends[1]);
+      fprintf(outputWire, "%d %d ", wires[w_count].bends0,
+                       wires[w_count].bends1);
     }
-    fprintf(outputWire, "%d %d\n", wires[w_count].bounds[2],
-                       wires[w_count].bounds[3]);
+    fprintf(outputWire, "%d %d\n", wires[w_count].bound2,
+                       wires[w_count].bound3);
   }
   fclose(outputCost);
   fclose(outputWire);
