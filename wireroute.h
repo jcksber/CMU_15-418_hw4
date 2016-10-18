@@ -40,7 +40,6 @@ typedef struct
   int list0;
   int list1;
   int list2;
-	omp_lock_t lock;
 	int val;
 } cost_cell_t;
 
@@ -64,10 +63,10 @@ int get_option_int(const char *option_name, int default_value);
 float get_option_float(const char *option_name, float default_value);
 
 /* Our helper functions */
-void horizontalCost(cost_cell_t *C, int row, int startX, int endX, int dimY, int wire_n);
-void verticalCost(cost_cell_t *C, int xCoord, int startY, int endY, int dimY, int wire_n);
+void horizontalCost(cost_cell_t *C, omp_lock_t *locks, int row, int startX, int endX, int dimY, int wire_n);
+void verticalCost(cost_cell_t *C, omp_lock_t *locks,  int xCoord, int startY, int endY, int dimY, int wire_n);
 void new_rand_path(wire_t *wire, int* rand, int wire_n);
-void incrCell(cost_cell_t *C, int x, int y, int dimY, int wire_n);
+inline void incrCell(cost_cell_t *C, omp_lock_t *lock, int x, int y, int dimY, int wire_n);
 void updateBoard(cost_t* board, cost_cell_t *B);
 int readBoard(cost_cell_t* board, int x, int y, int wire_n, int dimY);
 value_t readVertical(cost_t* board, int x, int s_y, int e_y, int wire_n, cost_cell_t *B);
