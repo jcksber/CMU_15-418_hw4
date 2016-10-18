@@ -74,7 +74,6 @@ void new_rand_path(wire_t* wire, int *rand, int wire_n){
   s_y = wire->bounds[1];
   e_x = wire->bounds[2];
   e_y = wire->bounds[3];
-
   if (s_x == e_x || s_y == e_y){
     return;
   }
@@ -442,7 +441,6 @@ int main(int argc, const char *argv[])
       new_rand_path( &(wires[w]), rand_wire, w);
     } // implicit barrier
   	printf(">>> Get wire initialized \n");
-
     //@@@@@@@@@@@@@@ MAIN LOOP @@@@@@@@@@@@@@
     for (i = 0; i < SA_iters; i++){
       // Clean up the board
@@ -452,6 +450,7 @@ int main(int argc, const char *argv[])
         for( x = 0; x < dim_x; x++){
           B[y*dim_y + x].val = 0;  // clean up board
           B[y*dim_y + x].wire = 0;  // clean up board
+          memset(B[y*dim_y + x].list, 0, sizeof(int)*WIRE_MAX);
         }
       }
   	  printf(">>> CleanUp board \n");
@@ -482,7 +481,6 @@ int main(int argc, const char *argv[])
           case 1:
             b1_x = mypath.bends[0];
             b1_y = mypath.bends[1]; // Get bend coordinate
-            printf("I HAVE TWO BENDS\n");
             if (s_y == b1_y) // Before bend is horizontal
             {
               horizontalCost(B, s_y, s_x, b1_x, dim_y,j);
@@ -501,10 +499,10 @@ int main(int argc, const char *argv[])
             }
 
           case 2:
-            //b1_x = mypath.bends[0];
-            //b1_y = mypath.bends[1];
-            //b2_x = mypath.bends[2];
-            //b2_y = mypath.bends[3];
+          // b1_x = mypath.bends[0];
+          //  b1_y = mypath.bends[1];
+           // b2_x = mypath.bends[2];
+           // b2_y = mypath.bends[3];
             // Exam first bend
             if (s_y == b1_y) // Before bend is horizontal
             {
@@ -524,10 +522,13 @@ int main(int argc, const char *argv[])
             }
         }
       } // implicit barrier
-  ///// DEBUG
-    }/*
-    //// DEBUG
 
+      //// DEBUG
+    }
+      /*
+      //
+      //
+      //
   	printf(">>> Layout new board \n");
       // Parallel by wire, determine NEW path
       #pragma omp parallel for default(shared)       \
