@@ -7,7 +7,7 @@
 ### Created: November, 2018
 
 ## Overview: 
-This assignment is identical to Assignment 3, except parallelizatioin is done via MPI (versus OpenMP) (see [Assignment 3 README](https://github.com/jcksber/CMU_15-418_hw3/blob/master/README.md)
+This assignment is identical to Assignment 3, except parallelizatioin is done via MPI (versus OpenMP) (see [Assignment 3 README])(https://github.com/jcksber/CMU_15-418_hw3/blob/master/README.md)
 
 ## Resources:
 * Carnegie Mellon Staff & Students
