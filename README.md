@@ -11,4 +11,4 @@ This assignment is identical to Assignment 3, except parallelizatioin is done vi
 
 ## Resources:
 * Carnegie Mellon Staff & Students
-59 cores of an Intel Xeon Phi processor
+* 59 cores of an Intel Xeon Phi processor
